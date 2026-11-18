@@ -1,6 +1,8 @@
 import React, {useState, useEffect} from 'react';
-import { View, Text, Image, Pressable, StyleSheet, Alert } from 'react-native';
+import { View, Text, Image, Pressable, StyleSheet, Alert, TextInput } from 'react-native';
 import * as ImagePicker from 'expo-image-picker'
+import { ChevronRight, History } from 'lucide-react-native';
+import { scanImage } from '../processHandlers/imageHandler.js';
 
 export default function ScanScreen() {
     const [image, setImage] = useState(null);
@@ -20,7 +22,17 @@ export default function ScanScreen() {
     } , []);
 
     async function sendImageToScan(uri) {
-        Alert.alert("sending image to scan" + uri)
+        if (!uri) return;
+
+        try {
+            const verdict = await scanImage(uri);
+
+            console.log(verdict);        
+            console.log(typeof verdict); 
+            Alert.alert('Scan complete', `Verdict: ${verdict}`);
+        } catch (error) {
+            Alert.alert('Scan failed', error.message);
+        }
     }
     
 return (
@@ -28,15 +40,23 @@ return (
             {image && (
                 <Image
                     source={{ uri: image }}
-                    style={{ width: '100%', height: '100%' }}
+                    style={styles.image}
                 />
             )}
-
-            
+            <View style={styles.inputContainer}> 
+                <TextInput style={styles.inputPatient} id="patientName" placeholder='Patient Name'></TextInput>
+                <View style={styles.timeContainer}>
+                    <History size={24} color="#1769AA" />
+                    <Text style={styles.inputJournal}>{new Date().toLocaleString()}</Text>
+                </View>
+                <TextInput style={styles.inputJournal} id="Journal" placeholder='Journal...'></TextInput>
+            </View>
             <Pressable style={styles.sendImage} onPress={() => sendImageToScan(image)}>
+                <ChevronRight size={24} color="#ffffff" />
                 <Text style={styles.sendImageText}>
                     Send image to scan
                 </Text>
+                
             </Pressable>
 
         </View>
@@ -44,12 +64,39 @@ return (
 }
 
 const styles = StyleSheet.create({
+image: {
+    padding: 10,
+    width: '100%',
+    height: '30%',
+    borderRadius: 14,
+},
+timeContainer: {
+    paddingLeft: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 1,
+},
+inputContainer: {
+    padding: 10,
+    display: 'flex',
+    gap: 10
+},
+inputPatient: {
+    padding: 10,
+    width: '100%',
+    fontSize: 30
+},
+inputJournal: {
+    padding: 10,
+    width: '100%',
+},
+
 sendImage: {
     position: 'absolute',
     bottom: 30,
     alignSelf: 'center',
     backgroundColor: '#1769AA',
-        flexDirection: 'column',
+        flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         padding: 20,

@@ -2,6 +2,10 @@ import { collection, onSnapshot } from "firebase/firestore";
 
 import { db, storage } from "../firebase";
 import { getStorage, ref, getDownloadURL } from "firebase/storage";
+
+
+
+
 export async function uploadImage(uri) {
 
 }
@@ -58,9 +62,34 @@ export function getImages(setImages) {
 }
 
 
-// Send image to scanning service
-export async function scanImage(uri) {
 
+const API_URL = 'http://192.168.1.100:5000/cnn/return';
+
+export async function scanImage(uri) {
+    try {
+        const formData = new FormData();
+
+        formData.append('image', {
+            uri: uri,
+            name: 'image.jpg',
+            type: 'image/jpeg',
+        });
+
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            body: formData,
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error: ${response.status}`);
+        }
+
+        return await response.json();
+
+    } catch (error) {
+        console.error('Image scanning failed:', error);
+        throw error;
+    }
 }
 
 // Delete image from Firebase Storage / Firestore

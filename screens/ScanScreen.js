@@ -2,7 +2,7 @@ import React, {useState, useEffect} from 'react';
 import { View, Text, Image, Pressable, StyleSheet, Alert, TextInput } from 'react-native';
 import * as ImagePicker from 'expo-image-picker'
 import { ChevronRight, History } from 'lucide-react-native';
-import { scanImage } from '../processHandlers/imageHandler.js';
+import { scanImage, uploadImage } from '../processHandlers/imageHandler.js';
 
 export default function ScanScreen() {
     const [image, setImage] = useState(null);
@@ -22,16 +22,29 @@ export default function ScanScreen() {
     } , []);
 
     async function sendImageToScan(uri) {
-        if (!uri) return;
+
+        if (!uri) {
+            Alert.alert('Error', 'No image selected');
+            return;
+        }
 
         try {
+            
+
             const verdict = await scanImage(uri);
 
-            console.log(verdict);        
-            console.log(typeof verdict); 
-            Alert.alert('Scan complete', `Verdict: ${verdict}`);
+            Alert.alert(
+                'Scan complete',
+                `Verdict: ${verdict}`,
+                [{ text: 'OK' }]
+            );
+            uploadImage();
         } catch (error) {
-            Alert.alert('Scan failed', error.message);
+
+            Alert.alert(
+                'Scan failed',
+                error.message
+            );
         }
     }
     

@@ -2,12 +2,12 @@ import { collection, onSnapshot } from "firebase/firestore";
 
 import { db, storage } from "../firebase";
 import { getStorage, ref, getDownloadURL } from "firebase/storage";
+import { File } from 'expo-file-system';
 
 
 
-
-export async function uploadImage(uri) {
-
+export async function uploadImage(uri, verdict, name, jernal, timestamp) {
+    Alert.alert({verdict, verdict, name, jernal, timestamp})
 }
 
 
@@ -63,34 +63,44 @@ export function getImages(setImages) {
 
 
 
-const API_URL = 'http://192.168.1.100:5000/cnn/return';
+
+
+const API_URL = 'http://192.168.0.131:5000/cnn/return';
 
 export async function scanImage(uri) {
-    try {
-        const formData = new FormData();
-
-        formData.append('image', {
-            uri: uri,
-            name: 'image.jpg',
-            type: 'image/jpeg',
-        });
-
-        const response = await fetch(API_URL, {
-            method: 'POST',
-            body: formData,
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error: ${response.status}`);
-        }
-
-        return await response.json();
-
-    } catch (error) {
-        console.error('Image scanning failed:', error);
-        throw error;
+    if (!uri) {
+        throw new Error('No image URI provided');
     }
+
+    // Create a File from the local image URI
+    const file = new File(uri);
+
+    console.log('Image size:', file.size);
+    console.log('Image type:', file.type);
+
+    // Send the actual file as the HTTP request body
+    const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'image/jpeg',
+        },
+        body: file,
+    });
+
+    if (!response.ok) {
+        throw new Error(`HTTP error: ${response.status}`);
+    }
+
+    const verdict = await response.json();
+
+    if (typeof verdict !== 'number') {
+        throw new Error('Expected a number from server');
+    }
+
+    return verdict;
 }
+
+
 
 // Delete image from Firebase Storage / Firestore
 export async function deleteImage(imageId) {

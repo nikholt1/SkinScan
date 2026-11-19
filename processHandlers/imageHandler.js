@@ -1,5 +1,5 @@
 import { collection, onSnapshot } from "firebase/firestore";
-
+import { Alert } from 'react-native';
 import { db, storage } from "../firebase";
 import { getStorage, ref, getDownloadURL } from "firebase/storage";
 import { File } from 'expo-file-system';
@@ -7,7 +7,7 @@ import { File } from 'expo-file-system';
 
 
 export async function uploadImage(uri, verdict, name, jernal, timestamp) {
-    Alert.alert({verdict, verdict, name, jernal, timestamp})
+    Alert.alert("Uploading image")
 }
 
 

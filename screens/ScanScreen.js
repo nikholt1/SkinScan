@@ -1,12 +1,12 @@
 import React, {useState, useEffect} from 'react';
 import { View, Text, Image, Pressable, StyleSheet, Alert, TextInput } from 'react-native';
 import * as ImagePicker from 'expo-image-picker'
-import { ChevronRight, History } from 'lucide-react-native';
+import { ChevronRight, History, HeartPulse } from 'lucide-react-native';
 import { scanImage, uploadImage } from '../processHandlers/imageHandler.js';
 
 export default function ScanScreen() {
     const [image, setImage] = useState(null);
-
+    const [verdict, setVerdict] = useState('');
     useEffect(() => {
         async function takePicture() {
             await ImagePicker.requestCameraPermissionsAsync();
@@ -31,13 +31,14 @@ export default function ScanScreen() {
         try {
             
 
-            const verdict = await scanImage(uri);
+            const res = await scanImage(uri);
 
-            Alert.alert(
-                'Scan complete',
-                `Verdict: ${verdict}`,
-                [{ text: 'OK' }]
-            );
+            // Alert.alert(
+            //     'Scan complete',
+            //     `Verdict: ${verdict}`,
+            //     [{ text: 'OK' }]
+            // );
+            setVerdict(res);
             uploadImage();
         } catch (error) {
 
@@ -63,6 +64,12 @@ return (
                     <Text style={styles.inputJournal}>{new Date().toLocaleString()}</Text>
                 </View>
                 <TextInput style={styles.inputJournal} id="Journal" placeholder='Journal...'></TextInput>
+                <View style={styles.verdictContainer}>
+                    <HeartPulse size={35} color="#dc4545" />
+                    <Text>Scan result: {verdict}</Text>
+                    <Text>Percentage verdict: <Text style={styles.percentageVerdict}> {(verdict * 100).toFixed(0)}%</Text></Text>
+                </View>
+                
             </View>
             <Pressable style={styles.sendImage} onPress={() => sendImageToScan(image)}>
                 <ChevronRight size={24} color="#ffffff" />
@@ -116,6 +123,16 @@ sendImage: {
         borderRadius: 12,
         marginBottom: 15,
         gap: 12,
+},
+verdictContainer: {
+    display: 'flex',
+    padding: 10,
+    gap: 5,
+
+},
+percentageVerdict: {
+    fontSize: 23,
+    fontWeight: 'bold',
 },
 sendImageText: {
     color: '#FFFFFF',

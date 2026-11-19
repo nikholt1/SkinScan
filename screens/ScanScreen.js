@@ -1,10 +1,12 @@
 import React, {useState, useEffect} from 'react';
-import { View, Text, Image, Pressable, StyleSheet, Alert } from 'react-native';
+import { View, Text, Image, Pressable, StyleSheet, Alert, TextInput } from 'react-native';
 import * as ImagePicker from 'expo-image-picker'
+import { ChevronRight, History, HeartPulse } from 'lucide-react-native';
+import { scanImage, uploadImage } from '../processHandlers/imageHandler.js';
 
 export default function ScanScreen() {
     const [image, setImage] = useState(null);
-
+    const [verdict, setVerdict] = useState('');
     useEffect(() => {
         async function takePicture() {
             await ImagePicker.requestCameraPermissionsAsync();
@@ -20,7 +22,31 @@ export default function ScanScreen() {
     } , []);
 
     async function sendImageToScan(uri) {
-        Alert.alert("sending image to scan" + uri)
+
+        if (!uri) {
+            Alert.alert('Error', 'No image selected');
+            return;
+        }
+
+        try {
+            
+
+            const res = await scanImage(uri);
+
+            // Alert.alert(
+            //     'Scan complete',
+            //     `Verdict: ${verdict}`,
+            //     [{ text: 'OK' }]
+            // );
+            setVerdict(res);
+            uploadImage();
+        } catch (error) {
+
+            Alert.alert(
+                'Scan failed',
+                error.message
+            );
+        }
     }
     
 return (
@@ -28,15 +54,29 @@ return (
             {image && (
                 <Image
                     source={{ uri: image }}
-                    style={{ width: '100%', height: '100%' }}
+                    style={styles.image}
                 />
             )}
-
-            
+            <View style={styles.inputContainer}> 
+                <TextInput style={styles.inputPatient} id="patientName" placeholder='Patient Name'></TextInput>
+                <View style={styles.timeContainer}>
+                    <History size={24} color="#1769AA" />
+                    <Text style={styles.inputJournal}>{new Date().toLocaleString()}</Text>
+                </View>
+                <TextInput style={styles.inputJournal} id="Journal" placeholder='Journal...'></TextInput>
+                <View style={styles.verdictContainer}>
+                    <HeartPulse size={35} color="#dc4545" />
+                    <Text>Scan result: {verdict}</Text>
+                    <Text>Percentage verdict: <Text style={styles.percentageVerdict}> {(verdict * 100).toFixed(0)}%</Text></Text>
+                </View>
+                
+            </View>
             <Pressable style={styles.sendImage} onPress={() => sendImageToScan(image)}>
+                <ChevronRight size={24} color="#ffffff" />
                 <Text style={styles.sendImageText}>
                     Send image to scan
                 </Text>
+                
             </Pressable>
 
         </View>
@@ -44,18 +84,55 @@ return (
 }
 
 const styles = StyleSheet.create({
+image: {
+    padding: 10,
+    width: '100%',
+    height: '30%',
+    borderRadius: 14,
+},
+timeContainer: {
+    paddingLeft: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 1,
+},
+inputContainer: {
+    padding: 10,
+    display: 'flex',
+    gap: 10
+},
+inputPatient: {
+    padding: 10,
+    width: '100%',
+    fontSize: 30
+},
+inputJournal: {
+    padding: 10,
+    width: '100%',
+},
+
 sendImage: {
     position: 'absolute',
     bottom: 30,
     alignSelf: 'center',
     backgroundColor: '#1769AA',
-        flexDirection: 'column',
+        flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         padding: 20,
         borderRadius: 12,
         marginBottom: 15,
         gap: 12,
+},
+verdictContainer: {
+    display: 'flex',
+    padding: 10,
+    gap: 5,
+
+},
+percentageVerdict: {
+    fontSize: 23,
+    fontWeight: 'bold',
 },
 sendImageText: {
     color: '#FFFFFF',

@@ -7,20 +7,48 @@ import { scanImage, uploadImage } from '../processHandlers/imageHandler.js';
 export default function ScanScreen() {
     const [image, setImage] = useState(null);
     const [verdict, setVerdict] = useState('');
-    useEffect(() => {
-        async function takePicture() {
-            await ImagePicker.requestCameraPermissionsAsync();
 
-            const res = await ImagePicker.launchCameraAsync();
 
-            if (res.canceled) return;
+    async function takePicture() {
+        const permission = await ImagePicker.requestCameraPermissionsAsync();
 
-            setImage(res.assets[0].uri);
+        if (!permission.granted) {
+            Alert.alert(
+                'Permission required',
+                'Camera permission is needed to take a picture.'
+            );
+            return;
         }
 
-        takePicture();
-    } , []);
+        const res = await ImagePicker.launchCameraAsync();
 
+        if (res.canceled) {
+            return;
+        }
+
+        setImage(res.assets[0].uri);
+    }
+
+    async function chooseImage() {
+    const permission =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permission.granted) {
+        Alert.alert(
+        'Permission required',
+        'Media library permission is needed to choose an image.'
+        );
+        return;
+    }
+
+    const res = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+    });
+
+    if (!res.canceled) {
+        setImage(res.assets[0].uri);
+    }
+    }
     async function sendImageToScan(uri) {
 
         if (!uri) {
@@ -58,6 +86,10 @@ return (
                 />
             )}
             <View style={styles.inputContainer}> 
+                <View style={styles.imageChoisesContainer}>
+                    <Pressable onPress={takePicture} style={styles.imageChoiseBtn}><Text style={{color: '#FFFFFF', fontWeight: 'bold'}}>Take Picture</Text></Pressable>
+                    <Pressable onPress={chooseImage} style={styles.imageChoiseBtn}><Text style={{color: '#FFFFFF', fontWeight: 'bold'}}>Choose Image</Text></Pressable>
+                </View>
                 <TextInput style={styles.inputPatient} id="patientName" placeholder='Patient Name'></TextInput>
                 <View style={styles.timeContainer}>
                     <History size={24} color="#1769AA" />
@@ -89,6 +121,19 @@ image: {
     width: '100%',
     height: '30%',
     borderRadius: 14,
+},
+imageChoisesContainer: {
+    display: 'flex',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 10,
+},
+imageChoiseBtn: {
+    backgroundColor: '#1769AA',
+    padding: 20,
+    borderRadius: 12,
+    color: '#FFFFFF',
+    fontWeight: 'bold',
 },
 timeContainer: {
     paddingLeft: 10,

@@ -4,8 +4,12 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { LucideIcon } from '@react-native-vector-icons/lucide';
 import { HeartPulse, MapPin, Camera, History, BookOpen } from 'lucide-react-native';
+import user from '../processHandlers/userHandler.js';
 
 export default function HomeScreen({ navigation }) {
+
+    let user = user; 
+
     return (
         <View style={styles.container}>
 
@@ -15,6 +19,7 @@ export default function HomeScreen({ navigation }) {
                     <Text style={styles.subtitle}>
                         Welcome to SkinScan, AI-powered skin monitoring
                     </Text>
+                    <Text>{user ? user.email : 'Not logged in'}</Text>
                 </View>
 
                 <HeartPulse size={30} color="#DC4545" />

@@ -7,7 +7,7 @@ import { scanImage, uploadImage } from '../processHandlers/imageHandler.js';
 export default function ScanScreen() {
     const [image, setImage] = useState(null);
     const [verdict, setVerdict] = useState('');
-
+    
 
     async function takePicture() {
         const permission = await ImagePicker.requestCameraPermissionsAsync();
@@ -30,23 +30,37 @@ export default function ScanScreen() {
     }
 
     async function chooseImage() {
-    const permission =
+    const existing =
+        await ImagePicker.getMediaLibraryPermissionsAsync();
+
+    console.log(existing);
+
+    let permission = existing;
+
+    if (!existing.granted) {
+        permission =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
+    }
+
+    console.log(permission);
 
     if (!permission.granted) {
         Alert.alert(
         'Permission required',
-        'Media library permission is needed to choose an image.'
+        !permission.canAskAgain
+            ? 'Permission was denied. Enable Photos access in Settings.'
+            : 'Photos permission is needed to choose an image.'
         );
         return;
     }
 
-    const res = await ImagePicker.launchImageLibraryAsync({
+    const result =
+        await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
-    });
+        });
 
-    if (!res.canceled) {
-        setImage(res.assets[0].uri);
+    if (!result.canceled) {
+        setImage(result.assets[0].uri);
     }
     }
     async function sendImageToScan(uri) {

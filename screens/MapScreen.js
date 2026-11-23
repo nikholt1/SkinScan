@@ -1,10 +1,11 @@
 
 import React, { useEffect, useState, useRef } from 'react';
-import { View, StyleSheet, Alert } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
+import { View, StyleSheet, Alert, Text, TextInput, Pressable } from 'react-native';
+import MapView, { Marker, Circle } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { Hospital } from 'lucide-react-native';
-
+import { collection, getDocs, addDoc } from 'firebase/firestore';
+import { db } from '../firebase.js';
 
 export default function MapScreen() {
 
@@ -12,108 +13,87 @@ export default function MapScreen() {
     const [location, setLocation] = useState(null);
     const [trackUser, setTrackUser] = useState(true);
     const [hospitals, setHospitals] = useState([]);
-
+    const [moles, setMoles] = useState([]);
     const mapRef = useRef(null);
     const trackUserRef = useRef(true);
+    const [areas, setAreas] = useState([]);
+    const [selectedArea, setSelectedArea] = useState(null);
+
+    const [showNewArea, setShowNewArea] = useState(false);
+    const [newAreaCoordinates, setNewAreaCoordinates] = useState(null);
+    const [newAreaName, setNewAreaName] = useState('');
+    const [newAreaRadius, setNewAreaRadius] = useState('100');
 
     useEffect(() => {
         let locationSubscription;
 
-        async function getHospitals(latitude, longitude) {
+        async function getHospitals() {
             try {
-                const query = `
-                    [out:json][timeout:60];
-                    (
-                        nwr(around:20000,${latitude},${longitude})["amenity"="hospital"];
-                        nwr(around:20000,${latitude},${longitude})["healthcare"="hospital"];
-                        nwr(around:20000,${latitude},${longitude})["healthcare"="dermatology"];
-                    );
-                    out center;
-                `;
+                const snapshot = await getDocs(collection(db, 'hospitals'));
 
-                const response = await fetch(
-                    'https://ovp.dresel.systems/api/interpreter',
-                    {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded',
-                        },
-                        body: `data=${encodeURIComponent(query)}`,
-                    }
-                );
+                const hospitalList = snapshot.docs.map(doc => {
+                    const data = doc.data();
 
-                if (!response.ok) {
-                    throw new Error(`HTTP error  ${response.status}`);
-                }
+                    return {
+                        id: doc.id,
+                        name: data.name,
+                        latitude: data.latitude,
+                        longitude: data.longitude,
+                    };
+                });
 
-                const json = await response.json();
-
-                console.log('Overpass elements:', json.elements);
-
-                const results = json.elements
-                    .filter(element => {
-                        const name = element.tags?.name || '';
-
-                        return !/afsnit|fødeafsnit|sengeafsnit|department|ward|clinic/i.test(name);
-                    })
-                    .filter(element =>
-                        element.lat != null || element.center?.lat != null
-                    )
-                    .map(element => ({
-                        id: element.id,
-                        name: element.tags?.name || 'Hospital',
-                        latitude: element.lat ?? element.center.lat,
-                        longitude: element.lon ?? element.center.lon,
-                    }));
-
-                setHospitals(results);
-
-                console.log('Hospitals run:', results.length);
+                setHospitals(hospitalList);
 
             } catch (error) {
-                console.error('Hospital query failed ', error);
+                console.error('Error fetching hospitals:', error);
             }
         }
-        function getTestHospitals() {
-            return [
-                {
-                    id: 1,
-                    name: 'Aarhus Universitetshospital',
-                    latitude: 56.1896,
-                    longitude: 10.1833,
-                },
-                {
-                    id: 2,
-                    name: 'Odense Universitetshospital',
-                    latitude: 55.3984,
-                    longitude: 10.3883,
-                },
-                {
-                    id: 3,
-                    name: 'Rigshospitalet',
-                    latitude: 55.6963,
-                    longitude: 12.5683,
-                },
-                {
-                    id: 4,
-                    name: 'Herlev Hospital',
-                    latitude: 55.7347,
-                    longitude: 12.4402,
-                },
-                {
-                    id: 5,
-                    name: 'Aalborg Universitetshospital',
-                    latitude: 57.0140,
-                    longitude: 9.8990,
-                },
-                {
-                    id: 6,
-                    name: 'Esbjerg Sygehus',
-                    latitude: 55.4765,
-                    longitude: 8.4594,
-                },
-            ];
+
+        async function getRegisteredMoles() {
+            try {
+                const snapshot = await getDocs(collection(db, 'moles'));
+
+                const moleList = snapshot.docs.map(doc => {
+                    const data = doc.data();
+
+                    return {
+                        id: doc.id,
+                        reportedBy: data.reportedBy,
+                        latitude: data.latitude,
+                        longitude: data.longitude,
+                        verdict: (data.verdict * 100).toFixed(0),
+                    };
+                });
+
+                setMoles(moleList);
+
+            } catch (error) {
+                console.error('Error fetching moles:', error);
+            }
         }
+        async function getAreas() {
+            try {
+                const snapshot = await getDocs(collection(db, 'areas'));
+
+                const areaList = snapshot.docs.map(doc => {
+                    const data = doc.data();
+
+                    return {
+                        id: doc.id,
+                        latitude: Number(data.latitude),
+                        longitude: Number(data.longitude),
+                        radius: Number(data.radius),
+                    };
+                });
+
+
+                setAreas(areaList);
+            } catch (error) {
+                console.error('Error fetching areas:', error);
+            }
+            
+        }
+        
 
         async function getLocation() {
             const { status } =
@@ -139,8 +119,9 @@ export default function MapScreen() {
             //     initialLocation.latitude,
             //     initialLocation.longitude
             // );
-            const testHospitals = getTestHospitals();
-            setHospitals(testHospitals);
+            await getHospitals();
+            await getRegisteredMoles();
+            await getAreas();
 
             locationSubscription = await Location.watchPositionAsync(
                 {
@@ -167,29 +148,10 @@ export default function MapScreen() {
             );
         }
 
-        // Actual GPS location (my location)
+        
         getLocation();
 
-        // Test location: Odense
-        // setLocation({
-        //     latitude: 55.4038,
-        //     longitude: 10.4024
-        // });
-        // getHospitals(55.4038, 10.4024);
-
-        // Test location: Aarhus
-        // setLocation({
-        //     latitude: 56.1629,
-        //     longitude: 10.2039
-        // });
-        // getHospitals(56.1629, 10.2039);
-
-        // Test location: Varde
-        // setLocation({
-        //     latitude: 55.6211,
-        //     longitude: 8.4807
-        // });
-        // getHospitals(55.6211, 8.4807);
+        
 
         return () => {
             locationSubscription?.remove();
@@ -208,8 +170,145 @@ export default function MapScreen() {
         longitudeDelta: 0.05,
     };
 
+
+    function getDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371000; // Earth radius in meters
+
+        const toRad = (degrees) => degrees * Math.PI / 180;
+
+        const dLat = toRad(lat2 - lat1);
+        const dLon = toRad(lon2 - lon1);
+
+        const a =
+            Math.sin(dLat / 2) ** 2 +
+            Math.cos(toRad(lat1)) *
+            Math.cos(toRad(lat2)) *
+            Math.sin(dLon / 2) ** 2;
+
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    function getMedian(values) {
+        if (values.length === 0) return null;
+
+        const sorted = [...values].sort((a, b) => a - b);
+        const mid = Math.floor(sorted.length / 2);
+
+        return sorted.length % 2 !== 0
+            ? sorted[mid]
+            : (sorted[mid - 1] + sorted[mid]) / 2;
+    }
+
+    function getAreaDisplay(area) {
+
+        
+        const areaMoles = moles.filter(mole => {
+            const distance = getDistance(
+                area.latitude,
+                area.longitude,
+                mole.latitude,
+                mole.longitude
+            );
+
+            return distance <= area.radius;
+        });
+
+        
+        const verdicts = areaMoles.map(mole => mole.verdict);
+
+       
+        const median = getMedian(verdicts);
+
+        if (median === null) return "No data";
+
+        return `${median}%`;
+    }
+    function handleLongPress(event) {
+        const { coordinate } = event.nativeEvent;
+
+        setNewAreaCoordinates(coordinate);
+        setNewAreaName('');
+        setNewAreaRadius('100');
+        setShowNewArea(true);
+    }
+
+    async function saveNewArea() {
+        const radius = Number(newAreaRadius) * 1000;
+
+        if (!newAreaName.trim()) {
+            Alert.alert('Error', 'Enter an area name.');
+            return;
+        }
+
+        if (!Number.isFinite(radius) || radius <= 0) {
+            Alert.alert('Error', 'Enter a valid radius.');
+            return;
+        }
+
+        const newArea = {
+            name: newAreaName.trim(),
+            latitude: newAreaCoordinates.latitude,
+            longitude: newAreaCoordinates.longitude,
+            radius,
+        };
+
+        try {
+            const docRef = await addDoc(collection(db, 'areas'), newArea);
+
+            setAreas(prevAreas => [
+                ...prevAreas,
+                {
+                    id: docRef.id,
+                    ...newArea,
+                }
+            ]);
+
+            setShowNewArea(false);
+
+        } catch (error) {
+            console.error('Error saving area:', error);
+            Alert.alert('Error', 'Could not save area.');
+        }
+    }
+
+
     return (
         <View style={styles.container}>
+
+            {showNewArea && (
+                <View style={styles.newAreaContainer}>
+                    <Text style={styles.newAreaText}>Add new Area</Text>
+
+                    <TextInput
+                        style={styles.newAreaInput}
+                        placeholder="Enter area name"
+                        value={newAreaName}
+                        onChangeText={setNewAreaName}
+                    />
+
+                    <TextInput
+                        style={styles.newAreaInput}
+                        placeholder="Enter area radius"
+                        keyboardType="numeric"
+                        value={newAreaRadius}
+                        onChangeText={setNewAreaRadius}
+                    />
+
+                    <Pressable
+                        style={styles.newAreaButton}
+                        onPress={saveNewArea}
+                    >
+                        <Text style={styles.newAreaButtonText}>Save Area</Text>
+                    </Pressable>
+
+                    <Pressable onPress={() => setShowNewArea(false)}>
+                        <Text style={{ textAlign: 'center', marginTop: 10 }}>
+                            Cancel
+                        </Text>
+                    </Pressable>
+                </View>
+            )}
+
             <MapView
                 ref={mapRef}
                 style={styles.map}
@@ -217,25 +316,66 @@ export default function MapScreen() {
                 onPanDrag={handlePanDrag}
                 showsUserLocation={true}
                 showsMyLocationButton={true}
+                onLongPress={handleLongPress}
+                
             >
-                {hospitals.map(hospital => (
+            {hospitals.map((hospital) => (
                 <Marker
                     key={hospital.id}
                     coordinate={{
-                        latitude: hospital.latitude,
-                        longitude: hospital.longitude,
+                        latitude: Number(hospital.latitude),
+                        longitude: Number(hospital.longitude),
                     }}
                     title={hospital.name}
+                    description="Hospital"
                 >
                     <View style={{
                         backgroundColor: 'white',
                         padding: 6,
                         borderRadius: 20,
+                        elevation: 5,
                     }}>
                         <Hospital size={32} color="red" />
                     </View>
                 </Marker>
-                ))}
+            ))}
+            {moles.map((mole) => (
+                <Marker
+                    key={mole.id}
+                    coordinate={{
+                        latitude: Number(mole.latitude),
+                        longitude: Number(mole.longitude),
+                    }}
+                    title={mole.reportedBy}
+                    description={`Verdict: ${mole.verdict}%`}
+                />
+            ))}
+            {areas.map((area) => (
+        <React.Fragment key={area.id}>
+            <Circle
+                center={{
+                    latitude: area.latitude,
+                    longitude: area.longitude,
+                }}
+                radius={area.radius}
+                strokeColor="rgba(0, 120, 255, 0.9)"
+                fillColor="rgba(0, 120, 255, 0.15)"
+                strokeWidth={2}
+            />
+
+            <Marker
+                coordinate={{
+                    latitude: area.latitude + (area.radius / 111320),
+                    longitude: area.longitude,
+                }}
+                anchor={{ x: 0.5, y: 0.5 }}
+            >
+                <Text style={{ fontWeight: 'bold', color: 'blue' }}>
+                    {getAreaDisplay(area)}
+                </Text>
+            </Marker>
+        </React.Fragment>
+    ))}
             </MapView>
         </View>
     );
@@ -247,5 +387,50 @@ const styles = StyleSheet.create({
     },
     map: {
         flex: 1,
+    },
+    newAreaContainer: {
+        position: 'absolute',
+        top: 50,
+        alignSelf: 'center',
+        width: '90%',
+        maxWidth: 400,
+        zIndex: 100,
+        elevation: 10,
+        backgroundColor: '#FFFFFF',
+        padding: 20,
+        borderRadius: 16,
+        gap: 12,
+    },
+
+    newAreaText: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: '#202833',
+        marginBottom: 5,
+    },
+
+    newAreaInput: {
+        width: '100%',
+        backgroundColor: '#FFFFFF',
+        borderWidth: 1,
+        borderColor: '#DCE3EA',
+        borderRadius: 12,
+        paddingHorizontal: 16,
+        paddingVertical: 15,
+        fontSize: 16,
+        color: '#202833',
+    },
+
+    newAreaButton: {
+        backgroundColor: '#0078FF',
+        padding: 15,
+        borderRadius: 12,
+        alignItems: 'center',
+    },
+
+    newAreaButtonText: {
+        color: '#FFFFFF',
+        fontSize: 16,
+        fontWeight: 'bold',
     },
 });

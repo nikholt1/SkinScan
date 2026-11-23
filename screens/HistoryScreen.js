@@ -16,7 +16,7 @@ import {
     History,
     BookOpen
 } from 'lucide-react-native';
-import ThreeScene from '../processHandlers/threeSceneHandler.js';
+// import ThreeScene from '../processHandlers/threeSceneHandler.js';
 // import { getImages } from '../processHandlers/imageHandler.js';
 
 export default function HistoryScreen( { navigation } ) {
@@ -68,7 +68,7 @@ export default function HistoryScreen( { navigation } ) {
                         style={styles.cardImage}
                         resizeMode="cover"
                     />
-                    <ThreeScene />
+                    {/* <ThreeScene /> */}
                     
                     <View style={styles.cardContainer}>
 

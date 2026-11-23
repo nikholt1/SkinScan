@@ -1,14 +1,25 @@
-import React from 'react';
+import React, {useState, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { LucideIcon } from '@react-native-vector-icons/lucide';
-import { HeartPulse, MapPin, Camera, History, BookOpen } from 'lucide-react-native';
-import user from '../processHandlers/userHandler.js';
+import { HeartPulse, MapPin, Camera, History } from 'lucide-react-native';
+import { auth } from '../firebase.js';
+import { signOut, onAuthStateChanged } from 'firebase/auth';
 
 export default function HomeScreen({ navigation }) {
+    const [user, setUser] = useState(auth.currentUser);
 
-    let user = user; 
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, setUser);
+        return unsubscribe;
+    }, []);
+
+    async function logOut() {
+        try {
+            await signOut(auth);
+        } catch (error) {
+            console.error('Logout failed:', error);
+        }
+    }
+    
 
     return (
         <View style={styles.container}>
@@ -19,7 +30,19 @@ export default function HomeScreen({ navigation }) {
                     <Text style={styles.subtitle}>
                         Welcome to SkinScan, AI-powered skin monitoring
                     </Text>
-                    <Text>{user ? user.email : 'Not logged in'}</Text>
+                    {user ? (
+                        <View>
+                            <Text>{user.email}</Text>
+                            <Pressable onPress={logOut}>
+                                <Text>Log out</Text>
+                            </Pressable>
+                        </View>
+                    ) : (
+                        <Pressable onPress={() => navigation.navigate('Login')}>
+                            <Text>Login</Text>
+                        </Pressable>
+                    )}
+                    
                 </View>
 
                 <HeartPulse size={30} color="#DC4545" />

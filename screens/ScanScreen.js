@@ -30,38 +30,18 @@ export default function ScanScreen() {
     }
 
     async function chooseImage() {
-    const existing =
-        await ImagePicker.getMediaLibraryPermissionsAsync();
+        try {
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ['images'],
+            });
 
-    console.log(existing);
-
-    let permission = existing;
-
-    if (!existing.granted) {
-        permission =
-        await ImagePicker.requestMediaLibraryPermissionsAsync();
-    }
-
-    console.log(permission);
-
-    if (!permission.granted) {
-        Alert.alert(
-        'Permission required',
-        !permission.canAskAgain
-            ? 'Permission was denied. Enable Photos access in Settings.'
-            : 'Photos permission is needed to choose an image.'
-        );
-        return;
-    }
-
-    const result =
-        await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        });
-
-    if (!result.canceled) {
-        setImage(result.assets[0].uri);
-    }
+            if (!result.canceled) {
+                setImage(result.assets[0].uri);
+            }
+        } catch (error) {
+            console.error('Image picker error:', error);
+            Alert.alert('Error', error.message);
+        }
     }
     async function sendImageToScan(uri) {
 
@@ -91,42 +71,42 @@ export default function ScanScreen() {
         }
     }
     
-return (
-        <View style={{ flex: 1 }}>
-            {image && (
-                <Image
-                    source={{ uri: image }}
-                    style={styles.image}
-                />
-            )}
-            <View style={styles.inputContainer}> 
-                <View style={styles.imageChoisesContainer}>
-                    <Pressable onPress={takePicture} style={styles.imageChoiseBtn}><Text style={{color: '#FFFFFF', fontWeight: 'bold'}}>Take Picture</Text></Pressable>
-                    <Pressable onPress={chooseImage} style={styles.imageChoiseBtn}><Text style={{color: '#FFFFFF', fontWeight: 'bold'}}>Choose Image</Text></Pressable>
+    return (
+            <View style={{ flex: 1 }}>
+                {image && (
+                    <Image
+                        source={{ uri: image }}
+                        style={styles.image}
+                    />
+                )}
+                <View style={styles.inputContainer}> 
+                    <View style={styles.imageChoisesContainer}>
+                        <Pressable onPress={takePicture} style={styles.imageChoiseBtn}><Text style={{color: '#FFFFFF', fontWeight: 'bold'}}>Take Picture</Text></Pressable>
+                        <Pressable onPress={chooseImage} style={styles.imageChoiseBtn}><Text style={{color: '#FFFFFF', fontWeight: 'bold'}}>Choose Image</Text></Pressable>
+                    </View>
+                    <TextInput style={styles.inputPatient} id="patientName" placeholder='Patient Name'></TextInput>
+                    <View style={styles.timeContainer}>
+                        <History size={24} color="#1769AA" />
+                        <Text style={styles.inputJournal}>{new Date().toLocaleString()}</Text>
+                    </View>
+                    <TextInput style={styles.inputJournal} id="Journal" placeholder='Journal...'></TextInput>
+                    <View style={styles.verdictContainer}>
+                        <HeartPulse size={35} color="#dc4545" />
+                        <Text>Scan result: {verdict}</Text>
+                        <Text>Percentage verdict: <Text style={styles.percentageVerdict}> {(verdict * 100).toFixed(0)}%</Text></Text>
+                    </View>
+                    
                 </View>
-                <TextInput style={styles.inputPatient} id="patientName" placeholder='Patient Name'></TextInput>
-                <View style={styles.timeContainer}>
-                    <History size={24} color="#1769AA" />
-                    <Text style={styles.inputJournal}>{new Date().toLocaleString()}</Text>
-                </View>
-                <TextInput style={styles.inputJournal} id="Journal" placeholder='Journal...'></TextInput>
-                <View style={styles.verdictContainer}>
-                    <HeartPulse size={35} color="#dc4545" />
-                    <Text>Scan result: {verdict}</Text>
-                    <Text>Percentage verdict: <Text style={styles.percentageVerdict}> {(verdict * 100).toFixed(0)}%</Text></Text>
-                </View>
-                
-            </View>
-            <Pressable style={styles.sendImage} onPress={() => sendImageToScan(image)}>
-                <ChevronRight size={24} color="#ffffff" />
-                <Text style={styles.sendImageText}>
-                    Send image to scan
-                </Text>
-                
-            </Pressable>
+                <Pressable style={styles.sendImage} onPress={() => sendImageToScan(image)}>
+                    <ChevronRight size={24} color="#ffffff" />
+                    <Text style={styles.sendImageText}>
+                        Send image to scan
+                    </Text>
+                    
+                </Pressable>
 
-        </View>
-);
+            </View>
+    );
 }
 
 const styles = StyleSheet.create({
